@@ -1,9 +1,14 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using MinimalAPIPeliculas.Entidades;
 
 namespace MinimalAPIPeliculas
 {
-    public class ApplicationDbContext : DbContext
+    //Al comienzo heredaba Dbcontext
+    //public class ApplicationDbContext : DbContext
+    //Ahora heredo de IdentityDbContext para que se añadan las tablas de identity en la bbdd
+    public class ApplicationDbContext : IdentityDbContext
     {
         public ApplicationDbContext(DbContextOptions options) : base(options)
         {
@@ -30,6 +35,17 @@ namespace MinimalAPIPeliculas
 
             //Creamos la llave compuesta de la entidad ActorPelicula
             modelBuilder.Entity<ActorPelicula>().HasKey(a => new { a.PeliculaId, a.ActorId });
+
+            //Asignarles nombres personalizados a las tablas de Identity
+            modelBuilder.Entity<IdentityUser>().ToTable("Usuarios");
+            modelBuilder.Entity<IdentityRole>().ToTable("Roles");
+            //Informacion sobre un rol, asignar permisos especiales a roles
+            modelBuilder.Entity<IdentityRoleClaim<string>>().ToTable("RolesClaims");
+            //Informacion sobre un usuario, asignar permisos especiales a usuarios
+            modelBuilder.Entity<IdentityUserClaim<string>>().ToTable("UsuariosClaims");
+            modelBuilder.Entity<IdentityUserLogin<string>>().ToTable("UsuariosLogins");
+            modelBuilder.Entity<IdentityUserRole<string>>().ToTable("UsuariosRoles");
+            modelBuilder.Entity<IdentityUserToken<string>>().ToTable("UsuariosTokens");
         }
 
         // Con esta configuración estamos diciendo que crearemos esta tabla en la
@@ -40,5 +56,6 @@ namespace MinimalAPIPeliculas
         public DbSet<Comentario> Comentarios { get; set; }
         public DbSet<GeneroPelicula> GenerosPeliculas { get; set; }
         public DbSet<ActorPelicula> ActoresPeliculas { get; set; }
+        public DbSet<Error> Errores { get; set; }
     }
 }

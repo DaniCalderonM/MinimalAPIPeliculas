@@ -16,9 +16,11 @@ namespace MinimalAPIPeliculas.Endpoints
             // Metodo get para obtener todos los generos
             group.MapGet("/", ObtenerGeneros)
                 // Para activar el cache del servidor por 15 segundos
-                .CacheOutput(c => c.Expire(TimeSpan.FromSeconds(60)).Tag("generos-get"));
+                .CacheOutput(c => c.Expire(TimeSpan.FromSeconds(60)).Tag("generos-get"))
+                //Para añadir autorizacion a la ruta
+                .RequireAuthorization();
 
-            // Metodo get para obtener generos por id - Aplidando filtro en el endpoint
+            // Metodo get para obtener generos por id - Aplicando filtro en el endpoint
             group.MapGet("/{id:int}", ObtenerGeneroPorId);
 
             // Metodo Post para crear un genero, de manera asincrona para obtener de la BBDD

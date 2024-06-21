@@ -1,8 +1,11 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Cors;
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using MinimalAPIPeliculas;
 using MinimalAPIPeliculas.Endpoints;
 using MinimalAPIPeliculas.Entidades;
@@ -17,6 +20,16 @@ var originesPermitidos = builder.Configuration.GetValue<string>("origenesPermiti
 // Configuranto Entity Framework Core llamando a DbContext
 builder.Services.AddDbContext<ApplicationDbContext>(opciones =>
     opciones.UseSqlServer("name= DefaultConnection"));
+
+//Configuracion para Identity
+builder.Services.AddIdentityCore<IdentityUser>()
+    .AddEntityFrameworkStores<ApplicationDbContext>()
+    .AddDefaultTokenProviders();
+
+//Configuracion para poder crear y registrar usuarios (va con identity)
+builder.Services.AddScoped<UserManager<IdentityUser>>();
+//Configuracion para inicio de sesion de usuarios (va con identity)
+builder.Services.AddScoped<SignInManager<IdentityUser>>();
 
 // Con esta configuración decimos que cualquier pagina web
 // puede comunicarse con nosotros de cualquier forma.
@@ -49,6 +62,7 @@ builder.Services.AddScoped<IRepositorioGeneros, RepositorioGeneros>();
 builder.Services.AddScoped<IRepositorioActores, RepositorioActores>();
 builder.Services.AddScoped<IRepositorioPeliculas, RepositorioPeliculas>();
 builder.Services.AddScoped<IRepositorioComentarios, RepositorioComentarios>();
+builder.Services.AddScoped<IRepositorioErrores, RepositorioErrores>();
 
 builder.Services.AddScoped<IAlmacenadorArchivos, AlmacenadorArchivosLocal>();
 builder.Services.AddHttpContextAccessor();
@@ -58,6 +72,14 @@ builder.Services.AddAutoMapper(typeof(Program));
 
 // Constructor para FluentValidation
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
+
+//Me permite realizar configuraciones  respecto al manejo de errores
+// o problemas -> Luego nos vamos a los middlewares para continuar
+builder.Services.AddProblemDetails();
+
+//Para configurar servicios de autenticacion y autorizacion
+builder.Services.AddAuthentication().AddJwtBearer();
+builder.Services.AddAuthorization();
 
 // Fin de área de los servicios
 
@@ -76,6 +98,29 @@ var app = builder.Build();
 app.UseSwagger();
 app.UseSwaggerUI();
 
+// Segunda parte para poder usar el builder.Services.AddProblemDetails();
+app.UseExceptionHandler(ExceptionHandlerApp => ExceptionHandlerApp.Run(async context =>
+{// Todo esto es para que se guarden los errores en la base de datos
+    var exceptionHandlerFeature = context.Features.Get<IExceptionHandlerFeature>();
+    var excepcion = exceptionHandlerFeature?.Error!;
+
+    var error = new Error();
+    error.Fecha = DateTime.UtcNow;
+    error.MensajeDeError = excepcion.Message;
+    error.StackTrace = excepcion.StackTrace;
+
+    var repositorio = context.RequestServices.GetRequiredService<IRepositorioErrores>();
+    await repositorio.Crear(error);
+    // Hasta la linea de arriba es para que se guarden en la base de datos
+
+    await TypedResults.BadRequest(
+        new { tipo = "error", mensaje = "Ha ocurrido un mensaje de error inesperado", status = 500 })
+    .ExecuteAsync(context);
+}));
+//Esta tambien esta ligada al paso de arriba, me permite configurar la app para
+// que retorne codigos de status cuando haya error
+app.UseStatusCodePages();
+
 // Acceder a los archivos estaticos a traves de este middleware
 app.UseStaticFiles();
 
@@ -85,8 +130,16 @@ app.UseCors();
 // Configurando cache desde el servidor
 app.UseOutputCache();
 
+//Configurando autorizacion
+app.UseAuthorization();
+
+
 // Metodo get de la ruta raiz
 app.MapGet("/", [EnableCors(policyName: "libre")]() => "Hello World!");
+app.MapGet("/error", () =>
+{
+    throw new InvalidOperationException("error de ejemplo");
+});
 
 // Aplicando un Map Group
 app.MapGroup("/generos").MapGeneros();

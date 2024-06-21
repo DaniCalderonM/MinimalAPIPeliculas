@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.OutputCaching;
 using MinimalAPIPeliculas.DTOs;
 using MinimalAPIPeliculas.Entidades;
+using MinimalAPIPeliculas.Filtros;
 using MinimalAPIPeliculas.Repositorios;
 
 namespace MinimalAPIPeliculas.Endpoints
@@ -12,12 +13,12 @@ namespace MinimalAPIPeliculas.Endpoints
     {
         public static RouteGroupBuilder MapComentarios(this RouteGroupBuilder group)
         {
-            group.MapPost("/", Crear);
+            group.MapPost("/", Crear).AddEndpointFilter<FiltroValidaciones<CrearComentarioDTO>>();
             //Se configurara para poder acceder al cache segun a donde se encuentre
             group.MapGet("/", ObtenerTodos).CacheOutput(c => c.Expire(TimeSpan.FromSeconds(60))
             .Tag("comentarios-get").SetVaryByRouteValue(new string[] { "peliculaId" }));
             group.MapGet("/{id:int}", ObtenerPorId);
-            group.MapPut("/{id:int}", Actualizar);
+            group.MapPut("/{id:int}", Actualizar).AddEndpointFilter<FiltroValidaciones<CrearComentarioDTO>>(); ;
             group.MapDelete("/{id:int}", Borrar);
             return group;
         }

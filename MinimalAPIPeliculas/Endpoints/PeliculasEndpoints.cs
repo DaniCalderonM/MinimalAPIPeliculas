@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.SignalR.Protocol;
 using Microsoft.EntityFrameworkCore.Query.Internal;
 using MinimalAPIPeliculas.DTOs;
 using MinimalAPIPeliculas.Entidades;
+using MinimalAPIPeliculas.Filtros;
 using MinimalAPIPeliculas.Migrations;
 using MinimalAPIPeliculas.Repositorios;
 using MinimalAPIPeliculas.Servicios;
@@ -23,8 +24,8 @@ namespace MinimalAPIPeliculas.Endpoints
             group.MapGet("/", ObtenerTodos).CacheOutput(c => c.Expire(TimeSpan.FromSeconds(60)).Tag("peliculas-get"));
             group.MapGet("/{id:int}", ObtenerPorId);
             // El DisableAntiForgery es porque estamos utilizando el FromForm
-            group.MapPost("/", Crear).DisableAntiforgery();
-            group.MapPut("/{id:int}", Actualizar).DisableAntiforgery();
+            group.MapPost("/", Crear).DisableAntiforgery().AddEndpointFilter<FiltroValidaciones<CrearPeliculaDTO>>();
+            group.MapPut("/{id:int}", Actualizar).DisableAntiforgery().AddEndpointFilter<FiltroValidaciones<CrearPeliculaDTO>>();
             group.MapDelete("/{id:int}", Borrar);
             group.MapPost("/{id:int}/asignargeneros", AsignarGeneros);
             group.MapPost("/{id:int}/asignaractores", AsignarActores);
