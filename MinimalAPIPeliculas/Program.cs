@@ -6,12 +6,14 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.IdentityModel.Tokens;
 using MinimalAPIPeliculas;
 using MinimalAPIPeliculas.Endpoints;
 using MinimalAPIPeliculas.Entidades;
 using MinimalAPIPeliculas.Migrations;
 using MinimalAPIPeliculas.Repositorios;
 using MinimalAPIPeliculas.Servicios;
+using MinimalAPIPeliculas.Utilidades;
 
 var builder = WebApplication.CreateBuilder(args);
 var originesPermitidos = builder.Configuration.GetValue<string>("origenesPermitidos")!;
@@ -63,8 +65,11 @@ builder.Services.AddScoped<IRepositorioActores, RepositorioActores>();
 builder.Services.AddScoped<IRepositorioPeliculas, RepositorioPeliculas>();
 builder.Services.AddScoped<IRepositorioComentarios, RepositorioComentarios>();
 builder.Services.AddScoped<IRepositorioErrores, RepositorioErrores>();
-
+// para almacenar de forma local los archivos
 builder.Services.AddScoped<IAlmacenadorArchivos, AlmacenadorArchivosLocal>();
+//añadiendo servicios usuarios
+builder.Services.AddTransient<IServicioUsuarios, ServicioUsuarios>();
+// añadiendo el httpcontextaccessor
 builder.Services.AddHttpContextAccessor();
 
 // Constructor para AutoMapper
@@ -78,8 +83,32 @@ builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 builder.Services.AddProblemDetails();
 
 //Para configurar servicios de autenticacion y autorizacion
-builder.Services.AddAuthentication().AddJwtBearer();
-builder.Services.AddAuthorization();
+builder.Services.AddAuthentication().AddJwtBearer(opciones =>
+{   
+    //con esta linea, quitamos el mapeo de los claims
+    opciones.MapInboundClaims = false;
+
+    opciones.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = false,
+        ValidateAudience = false,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        //Esta es para utilizar solo una llave
+        //IssuerSigningKey = Llaves.ObtenerLlave(builder.Configuration).First(),
+        //Esta es para utilizar todas las llaves
+        IssuerSigningKeys = Llaves.ObtenerTodasLasLlaves(builder.Configuration),
+        ClockSkew = TimeSpan.Zero
+    };
+    
+    });
+
+builder.Services.AddAuthorization(opciones =>
+{
+    //Creamos una politica llamada esadmin en la que requeriremos que el usuario
+    // tengo un claim llamado esadmin
+    opciones.AddPolicy("esadmin", politica => politica.RequireClaim("esadmin"));
+});
 
 // Fin de área de los servicios
 
@@ -146,6 +175,7 @@ app.MapGroup("/generos").MapGeneros();
 app.MapGroup("/actores").MapActores();
 app.MapGroup("/peliculas").MapPeliculas();
 app.MapGroup("/pelicula/{peliculaId:int}/comentarios").MapComentarios();
+app.MapGroup("/usuarios").MapUsuarios();
 
 // Fin de área de los middleware
 app.Run();

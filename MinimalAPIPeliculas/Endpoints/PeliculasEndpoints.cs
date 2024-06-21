@@ -24,11 +24,13 @@ namespace MinimalAPIPeliculas.Endpoints
             group.MapGet("/", ObtenerTodos).CacheOutput(c => c.Expire(TimeSpan.FromSeconds(60)).Tag("peliculas-get"));
             group.MapGet("/{id:int}", ObtenerPorId);
             // El DisableAntiForgery es porque estamos utilizando el FromForm
-            group.MapPost("/", Crear).DisableAntiforgery().AddEndpointFilter<FiltroValidaciones<CrearPeliculaDTO>>();
-            group.MapPut("/{id:int}", Actualizar).DisableAntiforgery().AddEndpointFilter<FiltroValidaciones<CrearPeliculaDTO>>();
-            group.MapDelete("/{id:int}", Borrar);
-            group.MapPost("/{id:int}/asignargeneros", AsignarGeneros);
-            group.MapPost("/{id:int}/asignaractores", AsignarActores);
+            group.MapPost("/", Crear).DisableAntiforgery().AddEndpointFilter<FiltroValidaciones<CrearPeliculaDTO>>()
+                .RequireAuthorization("esadmin");
+            group.MapPut("/{id:int}", Actualizar).DisableAntiforgery().AddEndpointFilter<FiltroValidaciones<CrearPeliculaDTO>>()
+                .RequireAuthorization("esadmin");
+            group.MapDelete("/{id:int}", Borrar).RequireAuthorization("esadmin");
+            group.MapPost("/{id:int}/asignargeneros", AsignarGeneros).RequireAuthorization("esadmin");
+            group.MapPost("/{id:int}/asignaractores", AsignarActores).RequireAuthorization("esadmin");
             return group;
         }
 

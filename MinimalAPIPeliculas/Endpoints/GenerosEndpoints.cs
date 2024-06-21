@@ -24,13 +24,15 @@ namespace MinimalAPIPeliculas.Endpoints
             group.MapGet("/{id:int}", ObtenerGeneroPorId);
 
             // Metodo Post para crear un genero, de manera asincrona para obtener de la BBDD
-            group.MapPost("/", CrearGenero).AddEndpointFilter<FiltroValidaciones<CrearGeneroDTO>>();
+            group.MapPost("/", CrearGenero).AddEndpointFilter<FiltroValidaciones<CrearGeneroDTO>>()
+                .RequireAuthorization("esadmin");
 
             // Metodo Put para actualizar un genero por su id
-            group.MapPut("/{id:int}", ActualizarGenero).AddEndpointFilter<FiltroValidaciones<CrearGeneroDTO>>();
+            group.MapPut("/{id:int}", ActualizarGenero).AddEndpointFilter<FiltroValidaciones<CrearGeneroDTO>>()
+                .RequireAuthorization("esadmin");
 
             // Metodo para borrar un genero por id
-            group.MapDelete("/{id:int}", EliminarGeneroPorId);
+            group.MapDelete("/{id:int}", EliminarGeneroPorId).RequireAuthorization("esadmin");
             return group;
         }
 
